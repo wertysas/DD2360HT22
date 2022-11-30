@@ -1,19 +1,25 @@
 CC = gcc
 NVCC = nvcc
 
+CUDA_DIR = /usr/local/cuda
+
+CUDA_LIB_DIR = /usr/local/cuda/lib64
+
+CC := $(CUDA_DIR)/bin/nvcc
+
+INCLUDE := $(CUDA_DIR)/include
+
 DEFS += \
 		-DGPU_TIMER \
 		$(SPACE)
 
-NVCCFLAGS += -I../common \
-			 -O3 \
+NVCCFLAGS += -O3 \
 			 -use_fast_math \
-			 -arch=sm_13 \
 			 -lm \
 			 $(SPACE)
 
 CFLAGS += -I../common \
-					-I/usr/include/cuda \
+					-I/usr/local/cuda \
 		  -O3 \
 		  -Wall \
 		  $(SPACE)
@@ -23,9 +29,9 @@ EXECUTABLE  := lud_cuda
 # Cuda source files (compiled with cudacc)
 CUFILES     := lud_kernel.cu
 # C/C++ source files (compiled with gcc / c++)
-CCFILES     := lud.c lud_cuda.c ../common/common.c
+CCFILES     := lud.c lud_cuda.c common.c
 
-OBJS = ../common/common.o lud.o lud_kernel.o
+OBJS = common.o lud.o lud_kernel.o
 
 .PHONY: all clean 
 all : $(EXECUTABLE)
@@ -42,3 +48,4 @@ $(EXECUTABLE) : $(OBJS)
 
 clean:
 	rm -f $(EXECUTABLE) $(OBJS) *.linkinfo
+
