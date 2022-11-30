@@ -1,6 +1,7 @@
 #makefile
+CUDA_DIR = /usr/local/cuda
 
-include ../../common/make.config
+CUDA_LIB_DIR = /usr/local/cuda/lib64
 
 CC := $(CUDA_DIR)/bin/nvcc
 
