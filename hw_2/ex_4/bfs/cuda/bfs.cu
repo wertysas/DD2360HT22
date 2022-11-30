@@ -20,6 +20,7 @@
 #include <string.h>
 #include <math.h>
 #include <cuda.h>
+#include <sys/time.h>
 
 #define MAX_THREADS_PER_BLOCK 512
 
@@ -38,6 +39,17 @@ struct Node
 #include "kernel2.cu"
 
 void BFSGraph(int argc, char** argv);
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Timing function requires #include<sys/time.h>
+////////////////////////////////////////////////////////////////////////////////
+double cpuSecond() {
+   struct timeval tp;
+   gettimeofday(&tp,NULL);
+   return ((double)tp.tv_sec + (double)tp.tv_usec*1.e-6);
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Main Program
@@ -180,7 +192,10 @@ void BFSGraph( int argc, char** argv)
 
 	int k=0;
 	printf("Start traversing the tree\n");
-	bool stop;
+       	
+    double t0 = cpuSecond();
+
+    bool stop;
 	//Call the Kernel untill all the elements of Frontier are not false
 	do
 	{
@@ -200,6 +215,8 @@ void BFSGraph( int argc, char** argv)
 	}
 	while(stop);
 
+    double t1 = cpuSecond();
+    printf("Compute time: %lf\n", (t1-t0));
 
 	printf("Kernel Executed %d times\n",k);
 
