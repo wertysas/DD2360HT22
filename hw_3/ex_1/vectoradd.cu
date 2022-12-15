@@ -35,13 +35,19 @@ int main(int argc, char **argv) {
   DataType *deviceOutput;
 
   // Input length reading
-  if (argc != 2) {
-    printf("Error wrong format! Correct Usage :\t ./vectoradd [array length]");
+  if (!(argc == 2 || argc ==3)) {
+    printf("Error wrong format! Correct Usage :\t ./vectoradd [vector length] [mode]\n \
+            vector length:\n\tpositive integer\n \
+            modes:\n\t0 (default output)\n\t1 (csv formatted output for measurements)\n");
     return -1;
   }
   inputLength = atoi(argv[1]);
   printf("The input length is %d\n", inputLength);
-  
+  bool formattedPrint = false;
+  if (argc==3 && atoi(argv[2])==1) {
+    formattedPrint = true;
+  }
+
   // Host memory allocation
   size_t vsizeB =  inputLength*sizeof(double);
   hostInput1 = (DataType*) malloc(vsizeB);
@@ -68,10 +74,11 @@ int main(int argc, char **argv) {
   cudaMalloc(&deviceOutput, vsizeB);
 
   // Copy memory to the GPU
-  double tb = time();
+  t0 = time();
   cudaMemcpy(&deviceInput1, hostInput1, vsizeB, cudaMemcpyHostToDevice);
   cudaMemcpy(&deviceInput2, hostInput2, vsizeB, cudaMemcpyHostToDevice);
-
+  double timeHostToDevice = time() - t0;
+  
   // Initialize the 1D grid and block dimensions
   uint blockSize = TPB;
   uint gridSize  = (inputLength+blockSize-1) / blockSize;
@@ -80,11 +87,12 @@ int main(int argc, char **argv) {
   t0 = time();
   vecAdd<<<gridSize, blockSize>>>(deviceInput1, deviceInput2, deviceOutput, inputLength);
   cudaDeviceSynchronize();
-  double gpuTiming = time() - t0;
+  double kernelTime = time() - t0;
 
   // Copy the GPU memory back to the CPU
+  t0 = time();
   cudaMemcpy(&hostOutput, &deviceOutput, vsizeB, cudaMemcpyDeviceToHost);
-  double totalTiming = time() - tb;
+  double timeDeviceToHost = time() - t0;
 
   // Compare the output with the reference
   DataType max_diff = 1e-7;
@@ -105,8 +113,19 @@ int main(int argc, char **argv) {
   free(hostInput2);
   free(hostOutput);
   free(resultRef);
-  printf("CPU vector addition time: %f", cpuTiming);
-  printf("GPU vector addition time: %f", gpuTiming);
-  printf("GPU vector addition + data transfer time: %f", totalTiming);
+
+
+
+  // Measurement prints
+  if (formattedPrint) {
+    printf("%f, %f, %f, %f", cpuTiming, kernelTime, timeHostToDevice, timeDeviceToHost);
+  }
+  else {
+    printf("CPU vector addition time: %f", cpuTiming);
+    printf("GPU vector addition time: %f\t(excl. data transfer)\n", kernelTime);
+    printf("GPU vector addition time: %f\t(incl. data transfer)\n", kernelTime+timeHostToDevice+timeDeviceToHost);
+    printf("Host to Device data transfer time: %f", timeHostToDevice);
+    printf("Device to Host data transfer time: %f", timeDeviceToHost);
+  }
   return 0;
 }
