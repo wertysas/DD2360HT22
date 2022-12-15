@@ -21,7 +21,7 @@ __global__ void vecAdd(DataType *in1, DataType *in2, DataType *out, uint len) {
 double time() {
   struct timeval tp;
   gettimeofday(&tp,NULL);
-  return ((double)tp.tv_sec + (double)tp.tv_usec*1.e-6);
+  return ((double)tp.tv_sec*1e3 + (double)tp.tv_usec*1e-3);
 }
 
 
@@ -42,7 +42,6 @@ int main(int argc, char **argv) {
     return -1;
   }
   inputLength = atoi(argv[1]);
-  printf("The input length is %d\n", inputLength);
   bool formattedPrint = false;
   if (argc==3 && atoi(argv[2])==1) {
     formattedPrint = true;
@@ -118,9 +117,10 @@ int main(int argc, char **argv) {
 
   // Measurement prints
   if (formattedPrint) {
-    printf("%f, %f, %f, %f", cpuTiming, kernelTime, timeHostToDevice, timeDeviceToHost);
+    printf("%d, %11.8f, %11.8f, %11.8f, %11.8f\n", inputLength, cpuTiming, kernelTime, timeHostToDevice, timeDeviceToHost);
   }
   else {
+    printf("Vector length: %d\n", inputLength);
     printf("CPU vector addition time: %f\n", cpuTiming);
     printf("GPU vector addition time: %f\t(excl. data transfer)\n", kernelTime);
     printf("GPU vector addition time: %f\t(incl. data transfer)\n", kernelTime+timeHostToDevice+timeDeviceToHost);
@@ -129,3 +129,4 @@ int main(int argc, char **argv) {
   }
   return 0;
 }
+
