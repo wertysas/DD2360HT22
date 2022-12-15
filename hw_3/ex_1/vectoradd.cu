@@ -121,11 +121,11 @@ int main(int argc, char **argv) {
     printf("%f, %f, %f, %f", cpuTiming, kernelTime, timeHostToDevice, timeDeviceToHost);
   }
   else {
-    printf("CPU vector addition time: %f", cpuTiming);
+    printf("CPU vector addition time: %f\n", cpuTiming);
     printf("GPU vector addition time: %f\t(excl. data transfer)\n", kernelTime);
     printf("GPU vector addition time: %f\t(incl. data transfer)\n", kernelTime+timeHostToDevice+timeDeviceToHost);
-    printf("Host to Device data transfer time: %f", timeHostToDevice);
-    printf("Device to Host data transfer time: %f", timeDeviceToHost);
+    printf("Host to Device data transfer time: %f\n", timeHostToDevice);
+    printf("Device to Host data transfer time: %f\n", timeDeviceToHost);
   }
   return 0;
 }
