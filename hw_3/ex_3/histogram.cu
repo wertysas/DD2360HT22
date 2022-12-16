@@ -123,17 +123,28 @@ int main(int argc, char **argv) {
   cudaMemcpy(hostBins, deviceBins, binSizeB, cudaMemcpyDeviceToHost);
 
   //@@ Insert code below to compare the output with the reference
+  bool errors = false;
   for (uint i=0; i<NUM_BINS; i++) {
     if (resultRef[i] != deviceBins[i]) {
       printf("Different Results! \t host result: %d \t device result %d\n", resultRef[i], deviceBins[i]);
+      errors = true;
     }
   }
-  
-  //@@ Free the GPU memory here
+  if (errors) {
+    printf("ERROR in calculations");
+  } 
+  else {
+    printf("SUCCESS - all calculations agree with CPU");
+  }
 
+  //@@ Free the GPU memory here
+  cudaFree(deviceInput);
+  cudaFree(deviceBins);
 
   //@@ Free the CPU memory here
-
+  free(hostInput);
+  free(hostBins);
+  free(resultRef);
 
   return 0;
 }
