@@ -23,8 +23,8 @@ double time() {
 __global__ void gemm(DataType *A, DataType *B, DataType *C, uint numARows,
                       uint numAColumns, uint numBRows, uint numBColumns){
   //  idxes defining c_ij to be computed by thread
-  uint i = blockIdx.y*blockDim.y + threadIdx.y;
-  uint j = blockIdx.x*blockDim.x + threadIdx.x;
+  uint i = blockIdx.x*blockDim.x + threadIdx.x;
+  uint j = blockIdx.y*blockDim.y + threadIdx.y;
   //  return if we're out of the array boundary
   if ( i >= numARows || j >= numBColumns ) { return;}
   DataType cij = 0.0;
