@@ -26,14 +26,14 @@ __global__ void gemm(DataType *A, DataType *B, DataType *C, uint numARows,
   uint i = blockIdx.x*blockDim.x + threadIdx.x;
   uint j = blockIdx.y*blockDim.y + threadIdx.y;
   //  return if we're out of the array boundary
-  if ( i >= numARows || j >= numBColumns ) { return;}
-  DataType cij = 0.0;
-  for (uint k=0; k<numBRows; k++) {
-    cij += A[i*numAColumns + k]*B[k*numBColumns + j];
+  if ( i < numARows && j < numBColumns ) {
+    DataType cij = 0.0;
+    for (uint k=0; k<numBRows; k++) {
+      cij += A[i*numAColumns + k]*B[k*numBColumns + j];
+    }
+    C[i*numBColumns + j] = cij;
   }
-  C[i*numBColumns + j] = cij;
 }
-
 
 int main(int argc, char **argv) {
   
