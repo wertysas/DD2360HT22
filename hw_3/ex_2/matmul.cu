@@ -22,13 +22,16 @@ double time() {
 // Compute C = A * B (naive implementation no shared memory or tiling)
 __global__ void gemm(DataType *A, DataType *B, DataType *C, uint numARows,
                       uint numAColumns, uint numBRows, uint numBColumns){
-  uint i = threadIdx.x;
-  uint j = threadIdx.y;
+  //  idxes defining c_ij to be computed by thread
+  uint i = blockIdx.y + blockDim.y + threadIdx.y;
+  uint j = blockIdx.x + blockDim.x + threadIdx.x;
+  //  return if we're out of the array boundary
+  if ( i >= numARows || j >= numBColumns ) { return;}
   DataType cij = 0.0;
   for (uint k=0; k<numBRows; k++) {
     cij += A[i*numAColumns + k]*B[k*numBColumns + j];
   }
-  C[i*numBColumns + j] = cij
+  C[i*numBColumns + j] = cij;
 }
 
 
@@ -111,8 +114,9 @@ int main(int argc, char **argv) {
 
 
   //@@ Initialize the grid and block dimensions here we use (1,1) threadblocks
-  dim3 dimGrid(1, 1);
-  dim3 dimBlock(numCRows, numCColumns);
+  uint blockSize = 32;
+  dim3 dimGrid((numCRows+blockSize-1)/blockSize,(numCColumns+blockSize-1)/blockSize );
+  dim3 dimBlock(blockSize, blockSize);
 
   //@@ Launch the GPU Kernel here
   t0 = time(); 
