@@ -19,15 +19,16 @@ double time() {
   return ((double)tp.tv_sec*1e3 + (double)tp.tv_usec*1e-3);
 }
 
-// Compute C = A * B
+// Compute C = A * B (naive implementation no shared memory or tiling)
 __global__ void gemm(DataType *A, DataType *B, DataType *C, uint numARows,
                       uint numAColumns, uint numBRows, uint numBColumns){
   uint i = threadIdx.x;
   uint j = threadIdx.y;
-  C[i*numBColumns + j] = 0.0;
+  DataType cij = 0.0;
   for (uint k=0; k<numBRows; k++) {
-    C[i*numBColumns + j] += A[i*numAColumns + k]*B[k*numBColumns + j];
+    cij += A[i*numAColumns + k]*B[k*numBColumns + j];
   }
+  C[i*numBColumns + j] = cij
 }
 
 
@@ -104,8 +105,8 @@ int main(int argc, char **argv) {
 
   //@@ Insert code to below to Copy memory to the GPU here
   t0 = time();
-  cudaMemcpy(&deviceA, hostA, sizeA, cudaMemcpyHostToDevice);
-  cudaMemcpy(&deviceB, hostB, sizeB, cudaMemcpyHostToDevice);
+  cudaMemcpy(deviceA, hostA, sizeA, cudaMemcpyHostToDevice);
+  cudaMemcpy(deviceB, hostB, sizeB, cudaMemcpyHostToDevice);
   double timeHostToDevice = time() - t0;
 
 
@@ -116,18 +117,19 @@ int main(int argc, char **argv) {
   //@@ Launch the GPU Kernel here
   t0 = time(); 
   gemm<<<dimGrid, dimBlock>>>(deviceA, deviceB, deviceC, numARows, numAColumns, numBRows, numBColumns);
+  cudaDeviceSynchronize();
   double kernelTime = time() - t0;
 
   //@@ Copy the GPU memory back to the CPU here
   t0 = time();
-  cudaMemcpy(&deviceC, hostC, sizeC, cudaMemcpyHostToDevice);
+  cudaMemcpy(hostC, deviceC, sizeC, cudaMemcpyDeviceToHost);
   double timeDeviceToHost = time() - t0;
   
 
   //@@ Insert code below to compare the output with the reference
   DataType max_diff = 1e-7;
   for (uint i=0; i<numCRows*numCColumns; i++) {
-    if (abs(hostC[i]-resultRef[i])<1e-7) {
+    if (abs(hostC[i]-resultRef[i])>1e-7) {
       printf("Error results differ more than maximum value (>%f)\n", max_diff);
       printf("Host Calculated Value: %f\n", resultRef[i]);
       printf("Device Calculated Value: %f\n", hostC[i]);

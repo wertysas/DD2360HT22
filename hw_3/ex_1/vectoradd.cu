@@ -74,8 +74,8 @@ int main(int argc, char **argv) {
 
   // Copy memory to the GPU
   t0 = time();
-  cudaMemcpy(&deviceInput1, hostInput1, vsizeB, cudaMemcpyHostToDevice);
-  cudaMemcpy(&deviceInput2, hostInput2, vsizeB, cudaMemcpyHostToDevice);
+  cudaMemcpy(deviceInput1, hostInput1, vsizeB, cudaMemcpyHostToDevice);
+  cudaMemcpy(deviceInput2, hostInput2, vsizeB, cudaMemcpyHostToDevice);
   double timeHostToDevice = time() - t0;
   
   // Initialize the 1D grid and block dimensions
@@ -90,13 +90,13 @@ int main(int argc, char **argv) {
 
   // Copy the GPU memory back to the CPU
   t0 = time();
-  cudaMemcpy(&hostOutput, &deviceOutput, vsizeB, cudaMemcpyDeviceToHost);
+  cudaMemcpy(hostOutput, deviceOutput, vsizeB, cudaMemcpyDeviceToHost);
   double timeDeviceToHost = time() - t0;
 
   // Compare the output with the reference
   DataType max_diff = 1e-7;
   for (uint i=0; i<inputLength; i++) {
-    if (abs(hostOutput[i]-resultRef[i])<1e-7) {
+    if (abs(hostOutput[i]-resultRef[i])>1e-7) {
       printf("Error results differ more than maximum value (>%f)\n", max_diff);
       printf("Host Calculated Value: %f\n", resultRef[i]);
       printf("Device Calculated Value: %f\n", hostOutput[i]);
