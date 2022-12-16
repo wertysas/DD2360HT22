@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
   }
 
   // Host memory allocation
-  size_t vsizeB =  inputLength*sizeof(double);
+  size_t vsizeB =  inputLength*sizeof(DataType);
   hostInput1 = (DataType*) malloc(vsizeB);
   hostInput2 = (DataType*) malloc(vsizeB);
   hostOutput = (DataType*) malloc(vsizeB);
