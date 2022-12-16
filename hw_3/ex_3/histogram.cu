@@ -126,8 +126,9 @@ int main(int argc, char **argv) {
   for (uint i=0; i<NUM_BINS; i++) {
     if (resultRef[i] != deviceBins[i]) {
       printf("Different Results! \t host result: %d \t device result %d\n", resultRef[i], deviceBins[i]);
+    }
   }
-
+  
   //@@ Free the GPU memory here
 
 
