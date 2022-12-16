@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
   numBRows = numAColumns;
   numBColumns = atoi(argv[3]);
   numCRows = numARows;
-  numCColumns = numAColumns;
+  numCColumns = numBColumns;
 
 
   bool formattedPrint = false;
