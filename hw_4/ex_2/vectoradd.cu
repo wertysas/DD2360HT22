@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <math.h>
-
 #include <random>
 
 #define DataType double
@@ -88,7 +87,7 @@ int main(int argc, char **argv) {
   const int nStreams = 4;
   cudaStream_t streams[nStreams];
   const int streamSize = (inputLength + nStreams - 1) / nStreams;
-  const int lastStreamSize = streamSize*nStreams-vsizeB;
+  const int lastStreamSize = streamSize*nStreams-inputLength;
   const int streamBytes = sizeof(DataType) * streamSize;
   const int lastStreamBytes = sizeof(DataType) * lastStreamSize;
   int offset;
@@ -116,10 +115,11 @@ int main(int argc, char **argv) {
   checkCuda( cudaMemcpyAsync(&deviceInput2[offset], &pinnedInput2[offset], lastStreamBytes, cudaMemcpyHostToDevice, streams[i]) );
   vecAdd<<<gridSize, blockSize, 0, streams[nStreams-1]>>>(&deviceInput1[offset], &deviceInput2[offset], &deviceOutput[offset], lastStreamSize);
   checkCuda( cudaMemcpyAsync(&pinnedOutput[offset], &deviceOutput[offset], lastStreamBytes, cudaMemcpyDeviceToHost, streams[i]) );;
- 
+   
   for (int i=0; i<nStreams; i++) {
     checkCuda( cudaStreamSynchronize(streams[i]) );
   }
+  printf("Streams Synchronized");
   // Timing
   double vectorAddTiming = time() - t0;
   
@@ -128,9 +128,9 @@ int main(int argc, char **argv) {
   DataType max_diff = 1e-7;
   for (uint i=0; i<inputLength; i++) {
     if (abs(pinnedOutput[i]-resultRef[i])>1e-7) {
-      printf("Error results differ more than maximum value (>%f)\n", max_diff);
-      printf("Host Calculated Value: %f\n", resultRef[i]);
-      printf("Device Calculated Value: %f\n", pinnedOutput[i]);
+      printf("Index: %d, Error results differ more than maximum value (>%f)\n", i, max_diff);
+      //printf("Host Calculated Value: %f\n", resultRef[i]);
+      //printf("Device Calculated Value: %f\n", pinnedOutput[i]);
     }
   }
   //@@ Free the GPU memory here
