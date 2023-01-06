@@ -39,9 +39,6 @@ double time() {
 
 int main(int argc, char **argv) {
   uint inputLength;
-  DataType *resultRef;
-  DataType *deviceInput1; DataType *deviceInput2;
-  DataType *deviceOutput;
 
   // Input length reading
   if (!(argc == 2 || argc ==3)) {
@@ -57,11 +54,13 @@ int main(int argc, char **argv) {
   }
 
   // Host memory allocation
+  DataType *resultRef;
   size_t vsizeB =  inputLength*sizeof(DataType);
   resultRef = (DataType*) malloc(vsizeB);
   
    
   // GPU memory allocation
+  DataType *deviceInput1, *deviceInput2, *deviceOutput;
   cudaMalloc(&deviceInput1, vsizeB);
   cudaMalloc(&deviceInput2, vsizeB);
   cudaMalloc(&deviceOutput, vsizeB);
@@ -97,7 +96,7 @@ int main(int argc, char **argv) {
   
   // Initialize the 1D grid and block dimensions
   uint blockSize = TPB;
-  uint gridSize  = (inputLength+blockSize-1) / blockSize;
+  uint gridSize  = (streamSize+blockSize-1) / blockSize;
 
   // Copy and kernel execution
   t0 = time();
@@ -110,12 +109,16 @@ int main(int argc, char **argv) {
   }
   int i = nStreams-1;
   offset= i*streamSize;
+  gridSize = (lastStreamSize+blockSize-1) / blockSize;
   checkCuda( cudaMemcpyAsync(&deviceInput1[offset], &pinnedInput1[offset], lastStreamSize, cudaMemcpyHostToDevice, streams[i]) );
   checkCuda( cudaMemcpyAsync(&deviceInput2[offset], &pinnedInput2[offset], lastStreamSize, cudaMemcpyHostToDevice, streams[i]) );
   vecAdd<<<gridSize, blockSize, 0, streams[nStreams-1]>>>(&deviceInput1[offset], &deviceInput2[offset], &deviceOutput[offset], lastStreamSize);
   checkCuda( cudaMemcpyAsync(&pinnedOutput[offset], &deviceOutput[offset], lastStreamSize, cudaMemcpyDeviceToHost, streams[i]) );
-
-  // Copy memory to the GPU
+ 
+  for (int i=0; i<nStreams; i++) {
+    checkCuda( cudaStreamSynchronize(streams[i]) );
+  }
+  // Timing
   double vectorAddTiming = time() - t0;
   
 
