@@ -29,6 +29,13 @@ __global__ void vecAdd(DataType *in1, DataType *in2, DataType *out, uint len) {
   }
 }
 
+__global__ void vecAddNonStreamed(DataType *in1, DataType *in2, DataType *out, uint len) {
+  const uint idx = threadIdx.x + blockDim.x*blockIdx.x;
+  if (idx < len) {
+    out[idx] =  in1[idx] + in2[idx];
+  }
+}
+
 // Timer function
 double time() {
   struct timeval tp;
@@ -133,6 +140,25 @@ int main(int argc, char **argv) {
       //printf("Device Calculated Value: %f\n", pinnedOutput[i]);
     }
   }
+
+  
+  t0 = time();
+  cudaMemcpy(deviceInput1, pinnedInput1, vsizeB, cudaMemcpyHostToDevice);
+  cudaMemcpy(deviceInput2, pinnedInput2, vsizeB, cudaMemcpyHostToDevice);
+  vecAdd<<<gridSize, blockSize>>>(deviceInput1, deviceInput2, deviceOutput, inputLength);
+  cudaDeviceSynchronize();
+  cudaMemcpy(pinnedOutput, deviceOutput, vsizeB, cudaMemcpyDeviceToHost);
+  double oldKernelTime = time() - t0;
+  
+  // Compare the output with the reference
+  for (uint i=0; i<inputLength; i++) {
+    if (abs(pinnedOutput[i]-resultRef[i])>1e-7) {
+      printf("Index: %d, Error results differ more than maximum value (>%f)\n", i, max_diff);
+      //printf("Host Calculated Value: %f\n", resultRef[i]);
+      //printf("Device Calculated Value: %f\n", pinnedOutput[i]);
+    }
+  }
+
   //@@ Free the GPU memory here
   cudaFree(deviceInput1);
   cudaFree(deviceInput2);
@@ -146,12 +172,13 @@ int main(int argc, char **argv) {
 
   // Measurement prints
   if (formattedPrint) {
-    printf("%d, %11.8f, %11.8f\n", inputLength, cpuTiming, vectorAddTiming);
+    printf("%d, %11.8f, %11.8f, %11.8f\n", inputLength, cpuTiming, vectorAddTiming, oldKernelTime);
   }
   else {
     printf("Vector length: %d\n", inputLength);
     printf("CPU vector addition time: %f\n", cpuTiming);
-    printf("GPU vector addition time: %f\t(incl. data transfer)\n", vectorAddTiming);
+    printf("GPU streamed vector addition time: %f\t(incl. data transfer)\n", vectorAddTiming);
+    printf("GPU non streamed kernel vector addition time: %f\t(incl. data transfer)\n", oldKernelTime);
   }
   return 0;
 }
