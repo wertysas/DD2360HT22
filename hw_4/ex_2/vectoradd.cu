@@ -2,9 +2,8 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <math.h>
-#include <assert.h>
+
 #include <random>
-#include <iostream>
 
 #define DataType double
 #define TPB 256
@@ -23,8 +22,8 @@ cudaError_t checkCuda(cudaError_t result)
   return result;
 }
 
-__global__ void vecAdd(DataType *in1, DataType *in2, DataType *out, uint offset, uint len) {
-  const uint idx = offset + threadIdx.x + blockDim.x*blockIdx.x;
+__global__ void vecAdd(DataType *in1, DataType *in2, DataType *out, uint len) {
+  const uint idx = threadIdx.x + blockDim.x*blockIdx.x;
   if (idx < len) {
     out[idx] =  in1[idx] + in2[idx];
   }
@@ -39,7 +38,6 @@ double time() {
 
 
 int main(int argc, char **argv) {
-  
   uint inputLength;
 
   // Input length reading
@@ -59,22 +57,20 @@ int main(int argc, char **argv) {
   DataType *resultRef;
   size_t vsizeB =  inputLength*sizeof(DataType);
   resultRef = (DataType*) malloc(vsizeB);
-    
-  printf("WE SHOULD BE GETTING HERE\n");
+  
+   
   // GPU memory allocation
   DataType *deviceInput1, *deviceInput2, *deviceOutput;
   cudaMalloc(&deviceInput1, vsizeB);
   cudaMalloc(&deviceInput2, vsizeB);
   cudaMalloc(&deviceOutput, vsizeB);
-  
-  printf("WE SHOULD BE GETTING HERE\n");
+
   // Pinned Memory allocation
   DataType *pinnedInput1, *pinnedInput2, *pinnedOutput;
   checkCuda(cudaMallocHost( (void**) &pinnedInput1, vsizeB) );
   checkCuda(cudaMallocHost( (void**) &pinnedInput2, vsizeB) );
   checkCuda(cudaMallocHost( (void**) &pinnedOutput, vsizeB) );
   
-  printf("WE SHOULD BE GETTING HERE\n");
   // Initialisation of pinned host arrays to random values
   std::default_random_engine e{};
   std::uniform_real_distribution<DataType> d{-1.0, 1.0};
@@ -91,14 +87,13 @@ int main(int argc, char **argv) {
   // Create and initialise streams
   const int nStreams = 4;
   cudaStream_t streams[nStreams];
-  const int streamSize = (inputLength + nStreams - 1) / nStreams;
-  const int lastStreamSize = inputLength-streamSize*(nStreams-1);
+  const int streamSize = (vsizeB + nStreams - 1) / nStreams;
+  const int lastStreamSize = streamSize*nStreams-vsizeB;
+  int offset;
   for (int i=0; i<nStreams; i++) {
     checkCuda( cudaStreamCreate(&streams[i]) );
   }
-  printf("streamSize: %d, lastStreamSize: %d\n", streamSize, lastStreamSize);
-  printf("STREAMS INITIALISED\n");
-
+  
   // Initialize the 1D grid and block dimensions
   uint blockSize = TPB;
   uint gridSize  = (streamSize+blockSize-1) / blockSize;
@@ -106,24 +101,18 @@ int main(int argc, char **argv) {
   // Copy and kernel execution
   t0 = time();
   for (int i=0; i<nStreams-1; i++) {
-    int offset= i*streamSize;
+    offset= i*streamSize;
     checkCuda( cudaMemcpyAsync(&deviceInput1[offset], &pinnedInput1[offset], streamSize, cudaMemcpyHostToDevice, streams[i]) );
-    printf("MEMCPY1\n");
     checkCuda( cudaMemcpyAsync(&deviceInput2[offset], &pinnedInput2[offset], streamSize, cudaMemcpyHostToDevice, streams[i]) );
-    printf("MEMCPY2\n");
-    vecAdd<<<gridSize, blockSize, 0, streams[i]>>>(deviceInput1, deviceInput2, deviceOutput, offset, inputLength);
+    vecAdd<<<gridSize, blockSize, 0, streams[i]>>>(&deviceInput1[offset], &deviceInput2[offset], &deviceOutput[offset], streamSize);
     checkCuda( cudaMemcpyAsync(&pinnedOutput[offset], &deviceOutput[offset], streamSize, cudaMemcpyDeviceToHost, streams[i]) );
-    printf("MEMCPY3\n");
-  
   }
-  printf("FIRST 3 STREAMS STARTED\n");
-
   int i = nStreams-1;
-  int offset= i*streamSize;
+  offset= i*streamSize;
   gridSize = (lastStreamSize+blockSize-1) / blockSize;
   checkCuda( cudaMemcpyAsync(&deviceInput1[offset], &pinnedInput1[offset], lastStreamSize, cudaMemcpyHostToDevice, streams[i]) );
   checkCuda( cudaMemcpyAsync(&deviceInput2[offset], &pinnedInput2[offset], lastStreamSize, cudaMemcpyHostToDevice, streams[i]) );
-  vecAdd<<<gridSize, blockSize, 0, streams[nStreams-1]>>>(deviceInput1, deviceInput2, deviceOutput, offset, lastStreamSize);
+  vecAdd<<<gridSize, blockSize, 0, streams[nStreams-1]>>>(&deviceInput1[offset], &deviceInput2[offset], &deviceOutput[offset], lastStreamSize);
   checkCuda( cudaMemcpyAsync(&pinnedOutput[offset], &deviceOutput[offset], lastStreamSize, cudaMemcpyDeviceToHost, streams[i]) );
  
   for (int i=0; i<nStreams; i++) {
@@ -137,10 +126,9 @@ int main(int argc, char **argv) {
   DataType max_diff = 1e-7;
   for (uint i=0; i<inputLength; i++) {
     if (abs(pinnedOutput[i]-resultRef[i])>1e-7) {
-      printf("INDEX: %d\n", i);
       printf("Error results differ more than maximum value (>%f)\n", max_diff);
-      //printf("Host Calculated Value: %f\n", resultRef[i]);
-      //printf("Device Calculated Value: %f\n", pinnedOutput[i]);
+      printf("Host Calculated Value: %f\n", resultRef[i]);
+      printf("Device Calculated Value: %f\n", pinnedOutput[i]);
     }
   }
   //@@ Free the GPU memory here
@@ -165,5 +153,4 @@ int main(int argc, char **argv) {
   }
   return 0;
 }
-
 
