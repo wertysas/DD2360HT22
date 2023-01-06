@@ -87,8 +87,10 @@ int main(int argc, char **argv) {
   // Create and initialise streams
   const int nStreams = 4;
   cudaStream_t streams[nStreams];
-  const int streamSize = (vsizeB + nStreams - 1) / nStreams;
+  const int streamSize = (inputLength + nStreams - 1) / nStreams;
   const int lastStreamSize = streamSize*nStreams-vsizeB;
+  const int streamBytes = sizeof(DataType) * streamSize;
+  const int lastStreamBytes = sizeof(DataType) * lastStreamSize;
   int offset;
   for (int i=0; i<nStreams; i++) {
     checkCuda( cudaStreamCreate(&streams[i]) );
@@ -102,18 +104,18 @@ int main(int argc, char **argv) {
   t0 = time();
   for (int i=0; i<nStreams-1; i++) {
     offset= i*streamSize;
-    checkCuda( cudaMemcpyAsync(&deviceInput1[offset], &pinnedInput1[offset], streamSize, cudaMemcpyHostToDevice, streams[i]) );
-    checkCuda( cudaMemcpyAsync(&deviceInput2[offset], &pinnedInput2[offset], streamSize, cudaMemcpyHostToDevice, streams[i]) );
+    checkCuda( cudaMemcpyAsync(&deviceInput1[offset], &pinnedInput1[offset], streamBytes, cudaMemcpyHostToDevice, streams[i]) );
+    checkCuda( cudaMemcpyAsync(&deviceInput2[offset], &pinnedInput2[offset], streamBytes, cudaMemcpyHostToDevice, streams[i]) );
     vecAdd<<<gridSize, blockSize, 0, streams[i]>>>(&deviceInput1[offset], &deviceInput2[offset], &deviceOutput[offset], streamSize);
-    checkCuda( cudaMemcpyAsync(&pinnedOutput[offset], &deviceOutput[offset], streamSize, cudaMemcpyDeviceToHost, streams[i]) );
+    checkCuda( cudaMemcpyAsync(&pinnedOutput[offset], &deviceOutput[offset], streamBytes, cudaMemcpyDeviceToHost, streams[i]) );
   }
   int i = nStreams-1;
   offset= i*streamSize;
   gridSize = (lastStreamSize+blockSize-1) / blockSize;
-  checkCuda( cudaMemcpyAsync(&deviceInput1[offset], &pinnedInput1[offset], lastStreamSize, cudaMemcpyHostToDevice, streams[i]) );
-  checkCuda( cudaMemcpyAsync(&deviceInput2[offset], &pinnedInput2[offset], lastStreamSize, cudaMemcpyHostToDevice, streams[i]) );
+  checkCuda( cudaMemcpyAsync(&deviceInput1[offset], &pinnedInput1[offset], lastStreamBytes, cudaMemcpyHostToDevice, streams[i]) );
+  checkCuda( cudaMemcpyAsync(&deviceInput2[offset], &pinnedInput2[offset], lastStreamBytes, cudaMemcpyHostToDevice, streams[i]) );
   vecAdd<<<gridSize, blockSize, 0, streams[nStreams-1]>>>(&deviceInput1[offset], &deviceInput2[offset], &deviceOutput[offset], lastStreamSize);
-  checkCuda( cudaMemcpyAsync(&pinnedOutput[offset], &deviceOutput[offset], lastStreamSize, cudaMemcpyDeviceToHost, streams[i]) );
+  checkCuda( cudaMemcpyAsync(&pinnedOutput[offset], &deviceOutput[offset], lastStreamBytes, cudaMemcpyDeviceToHost, streams[i]) );;
  
   for (int i=0; i<nStreams; i++) {
     checkCuda( cudaStreamSynchronize(streams[i]) );
