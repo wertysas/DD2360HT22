@@ -61,17 +61,16 @@ int main(int argc, char **argv) {
   uint numCColumns;
 
   //@@ Insert code below to read in numARows, numAColumns, numBColumns from args
-  if (!(argc == 4 || argc == 5)) {
-    printf("Error wrong format! Correct Usage :\t ./matmul [nrows matrix 1] [ncols matrix 1] \
-            [ncols matrix 2]\n \
-            modes:\n\t0 (default output)\n\t1 (csv formatted output for measurements)\n");
+  if (argc != 2) {
+    printf("Error wrong format! Correct Usage :\t ./matmul [matrix_dim]\t\
+            (matrices will be of dimension matrix_dim x matrix_dim");
     return -1;
   }
   
   numARows = atoi(argv[1]);
-  numAColumns = atoi(argv[2]);
+  numAColumns = numARows;
   numBRows = numAColumns;
-  numBColumns = atoi(argv[3]);
+  numBColumns = numARows;
   numCRows = numARows;
   numCColumns = numBColumns;
 
