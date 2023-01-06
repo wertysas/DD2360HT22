@@ -3,6 +3,7 @@
 #include <sys/time.h>
 #include <math.h>
 #include <random>
+#include <assert.h>
 
 #define DataType double
 #define TPB 256
@@ -87,7 +88,7 @@ int main(int argc, char **argv) {
   const int nStreams = 4;
   cudaStream_t streams[nStreams];
   const int streamSize = (inputLength + nStreams - 1) / nStreams;
-  const int lastStreamSize = streamSize*nStreams-inputLength;
+  const int lastStreamSize = inputLength - streamSize*(nStreams-1);
   const int streamBytes = sizeof(DataType) * streamSize;
   const int lastStreamBytes = sizeof(DataType) * lastStreamSize;
   int offset;
@@ -119,7 +120,6 @@ int main(int argc, char **argv) {
   for (int i=0; i<nStreams; i++) {
     checkCuda( cudaStreamSynchronize(streams[i]) );
   }
-  printf("Streams Synchronized");
   // Timing
   double vectorAddTiming = time() - t0;
   
