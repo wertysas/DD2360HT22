@@ -134,12 +134,20 @@ int main(int argc, char **argv) {
   
   cputimer_stop("Allocating device memory");
 
+
   // Check if concurrentAccessQ is non zero in order to prefetch memory
+#ifdef MEM_PREFETCH
   if (concurrentAccessQ) {
     cputimer_start();
     //@@ Insert code to prefetch in Unified Memory asynchronously to CPU
+    gpuCheck( cudaMemPrefetchAsync(temp, temp_size, cudaCpuDeviceId) );
+    gpuCheck( cudaMemPrefetchAsync(tmp, tmp_size, cudaCpuDeviceId) );
+    gpuCheck( cudaMemPrefetchAsync(A, A_size, cudaCpuDeviceId) );
+    gpuCheck( cudaMemPrefetchAsync(ARowPtr, ARowPtr_size, cudaCpuDeviceId) );
+    gpuCheck( cudaMemPrefetchAsync(AColIndx, AColIndx_size, cudaCpuDeviceId) );
     cputimer_stop("Prefetching GPU memory to the host");
   }
+#endif
 
   // Initialize the sparse matrix
   cputimer_start();
@@ -158,11 +166,11 @@ int main(int argc, char **argv) {
     cputimer_start();
     //@@ Insert code to prefetch in Unified Memory asynchronously to the GPU
   cudaGetDevice(&device);
-  gpuCheck( cudaMemPrefetchAsync(temp, temp_size, device, NULL) );
-  gpuCheck( cudaMemPrefetchAsync(tmp, tmp_size, device, NULL) );
-  gpuCheck( cudaMemPrefetchAsync(A, A_size, device, NULL) );
-  gpuCheck( cudaMemPrefetchAsync(ARowPtr, ARowPtr_size, device, NULL) );
-  gpuCheck( cudaMemPrefetchAsync(AColIndx, AColIndx_size, device, NULL) );
+  gpuCheck( cudaMemPrefetchAsync(temp, temp_size, device) );
+  gpuCheck( cudaMemPrefetchAsync(tmp, tmp_size, device) );
+  gpuCheck( cudaMemPrefetchAsync(A, A_size, device) );
+  gpuCheck( cudaMemPrefetchAsync(ARowPtr, ARowPtr_size, device) );
+  gpuCheck( cudaMemPrefetchAsync(AColIndx, AColIndx_size, device) );
 
     cputimer_stop("Prefetching GPU memory to the device");
   }
