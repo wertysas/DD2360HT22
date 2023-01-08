@@ -120,7 +120,7 @@ int main(int argc, char **argv) {
   size_t tmp_size = temp_size;
   size_t A_size = nzv * sizeof(double);
   size_t  ARowPtr_size = (dimX+1) * sizeof(int);
-  size_t AColIndx_size = dimX * sizeof(int);
+  size_t AColIndx_size = nzv * sizeof(int);
 
   //@@ Insert the code to allocate the temp, tmp and the sparse matrix
   //@@ arrays using Unified Memory
@@ -138,13 +138,6 @@ int main(int argc, char **argv) {
   if (concurrentAccessQ) {
     cputimer_start();
     //@@ Insert code to prefetch in Unified Memory asynchronously to CPU
-  cudaGetDevice(&device);
-  gpuCheck( cudaMemPrefetchAsync(temp, temp_size, device, NULL) );
-  gpuCheck( cudaMemPrefetchAsync(tmp, tmp_size, device, NULL) );
-  gpuCheck( cudaMemPrefetchAsync(A, A_size, device, NULL) );
-  gpuCheck( cudaMemPrefetchAsync(ARowPtr, ARowPtr_size, device, NULL) );
-  gpuCheck( cudaMemPrefetchAsync(AColIndx, AColIndx_size, device, NULL) );
-
     cputimer_stop("Prefetching GPU memory to the host");
   }
 
@@ -164,6 +157,12 @@ int main(int argc, char **argv) {
   if (concurrentAccessQ) {
     cputimer_start();
     //@@ Insert code to prefetch in Unified Memory asynchronously to the GPU
+  cudaGetDevice(&device);
+  gpuCheck( cudaMemPrefetchAsync(temp, temp_size, device, NULL) );
+  gpuCheck( cudaMemPrefetchAsync(tmp, tmp_size, device, NULL) );
+  gpuCheck( cudaMemPrefetchAsync(A, A_size, device, NULL) );
+  gpuCheck( cudaMemPrefetchAsync(ARowPtr, ARowPtr_size, device, NULL) );
+  gpuCheck( cudaMemPrefetchAsync(AColIndx, AColIndx_size, device, NULL) );
 
     cputimer_stop("Prefetching GPU memory to the device");
   }
@@ -211,7 +210,7 @@ int main(int argc, char **argv) {
                             Adescriptor,
                             tempDescriptor,
                             &zero,
-                            tempDescriptor,
+                            tmpDescriptor,
                             CUDA_R_64F,
                             CUSPARSE_SPMV_ALG_DEFAULT,
                             buffer)
@@ -220,11 +219,11 @@ int main(int argc, char **argv) {
 
     //@@ Insert code to call cublas api to compute the axpy routine using cuBLAS.
     //@@ This calculation corresponds to: temp = alpha * tmp + temp
-    cublasCheck( cublasDaxpy(cublasHandle,dimX, &alpha, tmp, 1, temp, 1) );
+    cublasCheck( cublasDaxpy(cublasHandle, dimX, &alpha, tmp, 1, temp, 1) );
     //@@ Insert code to call cublas api to compute the norm of the vector using cuBLAS
-    cublasCheck( cublasDnrm2(cublasHandle,dimX, temp, 1, &norm) );
     //@@ This calculation corresponds to: ||temp||
-
+    cublasCheck( cublasDnrm2(cublasHandle, dimX, tmp, 1, &norm) );
+    
     // If the norm of A*temp is smaller than 10^-4 exit the loop
     if (norm < 1e-4)
       break;
@@ -272,3 +271,4 @@ int main(int argc, char **argv) {
 
   return 0;
 }
+
