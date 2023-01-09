@@ -108,6 +108,7 @@ resultRef = (DataType*) malloc(sizeC);
   for (uint i=0; i<numARows*numAColumns; i++) { hostA[i] = d(e); }
   for (uint i=0; i<numBRows*numBColumns; i++) { hostB[i] = d(e); }
 
+#ifdef DEBUG
   // Reference result computation
   //double t0 = time();
   for (uint i=0; i<numARows; i++) {
@@ -119,7 +120,8 @@ resultRef = (DataType*) malloc(sizeC);
     }
   }
   //double cpuTiming = time() - t0;
-  
+#endif
+
 #ifndef UNIFIED // with unified memory no copy is needed
   //@@ Insert code below to allocate GPU memory here
   cudaMalloc(&deviceA, sizeA);
@@ -159,6 +161,7 @@ resultRef = (DataType*) malloc(sizeC);
 #endif 
 
   //@@ Insert code below to compare the output with the reference
+#ifdef DEBUG
   DataType max_diff = 1e-7;
   for (uint i=0; i<numCRows*numCColumns; i++) {
     if (abs(hostC[i]-resultRef[i])>1e-7) {
@@ -167,6 +170,7 @@ resultRef = (DataType*) malloc(sizeC);
       printf("Device Calculated Value: %f\n", hostC[i]);
     }
   }
+#endif
 
   //@@ Free the GPU memory here
 #ifndef UNIFIED
